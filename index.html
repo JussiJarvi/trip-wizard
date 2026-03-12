@@ -1131,8 +1131,9 @@
         fetchWeather(userLocation.lat, userLocation.lon);
       },
       err => {
-        const msg = err.code === 1 ? 'Location access denied' : 'Could not get location';
-        banner.innerHTML = `<div style="font-size:13px;font-weight:500">${msg} — tap to retry</div>`;
+        const msgs = { 1: 'Access denied', 2: 'Position unavailable', 3: 'Timed out' };
+        const msg = msgs[err.code] || 'Unknown error';
+        banner.innerHTML = `<div style="font-size:13px;font-weight:500">Error ${err.code}: ${msg} — tap to retry</div>`;
         banner.onclick = requestLocation;
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
