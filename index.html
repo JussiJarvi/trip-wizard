@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Trip Wizard" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <title>Trip Wizard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --bg2: #1a1a2e;
+      --bg3: #16213e;
+      --card: #1e1e35;
+      --card2: #252540;
+      --accent: #e8b86d;
+      --accent2: #f0c88a;
+      --blue: #4a9eff;
+      --green: #4ecdc4;
+      --red: #ff6b6b;
+      --purple: #a78bfa;
+      --text: #f0ede8;
+      --text2: #a8a5b0;
+      --text3: #6b6880;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.15);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* Stars background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 10%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,0.25) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 50%, rgba(255,255,255,0.15) 0%, transparent 100%),
+        radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 40%, rgba(255,255,255,0.1) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 30% 55%, rgba(232,184,109,0.15) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* SPLASH SCREEN */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #splash.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+    .splash-icon { font-size: 64px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+    .splash-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: var(--accent); margin-bottom: 8px; }
+    .splash-sub { color: var(--text2); font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .splash-loader { margin-top: 40px; width: 40px; height: 2px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+    .splash-loader::after { content: ''; display: block; height: 100%; width: 40%; background: var(--accent); border-radius: 2px; animation: load 1.2s ease-in-out infinite; }
+    @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+    /* HEADER */
+    #header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,26,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid var(--border);
+      padding: calc(var(--safe-top) + 12px) 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-logo { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent); }
+    .header-dest { font-size: 13px; color: var(--text2); }
+    .header-dest strong { color: var(--text); font-weight: 500; }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--card2); border: 0.5px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; transition: all 0.15s;
+    }
+    .icon-btn:active { transform: scale(0.92); }
+
+    /* MAIN CONTENT */
+    #app { position: relative; z-index: 1; }
+
+    /* TAB BAR */
+    #tabbar {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      z-index: 100;
+      background: rgba(15,15,26,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 0.5px solid var(--border);
+      padding: 8px 0 calc(var(--safe-bot) + 8px);
+      display: flex;
+    }
+    .tab-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 6px 0;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-icon { font-size: 22px; transition: transform 0.15s; }
+    .tab-label { font-size: 10px; color: var(--text3); letter-spacing: 0.03em; transition: color 0.15s; }
+    .tab-item.active .tab-label { color: var(--accent); }
+    .tab-item.active .tab-icon { transform: scale(1.1); }
+    .tab-item:active .tab-icon { transform: scale(0.9); }
+
+    /* SCREENS */
+    .screen { display: none; padding: 16px 16px calc(90px + var(--safe-bot)); }
+    .screen.active { display: block; }
+
+    /* CARDS */
+    .card {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 500; }
+    .section-label { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 14px; margin-top: 6px; }
+
+    /* HOME SCREEN */
+    .hero-card {
+      background: linear-gradient(135deg, #1e1e35 0%, #16213e 50%, #1a1a2e 100%);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-card::after {
+      content: '🌷';
+      position: absolute;
+      right: -10px; top: -10px;
+      font-size: 80px;
+      opacity: 0.15;
+      transform: rotate(15deg);
+    }
+    .hero-greeting { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
+    .hero-city { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--accent); margin-bottom: 4px; }
+    .hero-dates { font-size: 13px; color: var(--text2); }
+    .hero-dates strong { color: var(--text); }
+    .hero-meta { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .pill {
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--text2);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .pill.accent { background: rgba(232,184,109,0.15); border-color: rgba(232,184,109,0.3); color: var(--accent); }
+
+    /* WEATHER BAR */
+    .weather-bar {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .weather-icon { font-size: 28px; }
+    .weather-info { flex: 1; }
+    .weather-temp { font-size: 22px; font-weight: 500; }
+    .weather-desc { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .weather-detail { font-size: 12px; color: var(--text3); text-align: right; line-height: 1.6; }
+
+    /* QUICK ACTIONS */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .quick-btn {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quick-btn:active { transform: scale(0.97); background: var(--card2); }
+    .quick-btn-icon { font-size: 26px; }
+    .quick-btn-label { font-size: 13px; font-weight: 500; }
+    .quick-btn-sub { font-size: 11px; color: var(--text3); }
+
+    /* AI CHAT SCREEN */
+    #chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-bottom: 8px;
+    }
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 88%;
+    }
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.ai { align-self: flex-start; align-items: flex-start; }
+    .msg-bubble {
+      padding: 11px 14px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .msg.user .msg-bubble {
+      background: var(--accent);
+      color: #1a1208;
+      border-bottom-right-radius: 5px;
+    }
+    .msg.ai .msg-bubble {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 5px;
+    }
+    .msg-time { font-size: 10px; color: var(--text3); padding: 0 4px; }
+    .msg-avatar { font-size: 16px; margin-bottom: 2px; }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: 18px;
+      border-bottom-left-radius: 5px;
+      align-self: flex-start;
+      width: fit-content;
+    }
+    .typing-dot { width: 7px; height: 7px; background: var(--text3); border-radius: 50%; animation: bounce 1.2s ease-in-out infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+    /* CHAT INPUT */
+    #chat-input-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 101;
+      background: rgba(15,15,26,0.97);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 0.5px solid var(--border);
+      padding: 10px 12px calc(var(--safe-bot) + 10px);
+      display: none;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    #chat-input-bar.visible { display: flex; }
+    .chat-suggestions {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 0 12px 10px;
+      position: fixed;
+      bottom: calc(64px + var(--safe-bot));
+      left: 0; right: 0;
+      z-index: 101;
+      display: none;
+      scrollbar-width: none;
+    }
+    .chat-suggestions.visible { display: flex; }
+    .chat-suggestions::-webkit-scrollbar { display: none; }
+    .suggestion-chip {
+      flex-shrink: 0;
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 12px;
+      color: var(--text2);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .suggestion-chip:active { background: rgba(232,184,109,0.15); color: var(--accent); }
+
+    #chat-input {
+      flex: 1;
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      border-radius: 22px;
+      padding: 10px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.4;
+    }
+    #chat-input::placeholder { color: var(--text3); }
+    #chat-input:focus { border-color: rgba(232,184,109,0.4); }
+    #send-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      color: #1a1208;
+    }
+    #send-btn:active { transform: scale(0.9); }
+    #send-btn:disabled { opacity: 0.4; }
+
+    /* TRIP PLANNER */
+    .day-card {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .day-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .day-number { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+    .day-title { font-weight: 500; margin-top: 2px; }
+    .day-body { padding: 0 16px 14px; display: none; }
+    .day-body.open { display: block; }
+    .event-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-top: 0.5px solid var(--border);
+    }
+    .event-time { font-size: 12px; color: var(--text3); min-width: 42px; padding-top: 2px; }
+    .event-icon { font-size: 18px; flex-shrink: 0; }
+    .event-info { flex: 1; }
+    .event-name { font-size: 14px; font-weight: 500; }
+    .event-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .add-event-btn {
+      width: 100%; margin-top: 8px; padding: 10px;
+      background: var(--card2); border: 0.5px dashed var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text3); font-size: 13px; cursor: pointer;
+      text-align: center; transition: all 0.15s;
+    }
+    .add-event-btn:active { color: var(--accent); border-color: var(--accent); }
+
+    /* SETTINGS SCREEN */
+    .settings-group { margin-bottom: 20px; }
+    .settings-row {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .settings-row:first-of-type { border-radius: var(--radius) var(--radius) 0 0; }
+    .settings-row:last-of-type { border-radius: 0 0 var(--radius) var(--radius); }
+    .settings-row:only-of-type { border-radius: var(--radius); }
+    .settings-row + .settings-row { border-top: none; }
+    .settings-label { font-size: 14px; }
+    .settings-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .settings-value { font-size: 14px; color: var(--text2); }
+    .settings-input {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      text-align: right;
+      outline: none;
+      width: 160px;
+    }
+    .settings-input::placeholder { color: var(--text3); }
+
+    /* MODAL */
+    #modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.7);
+      display: none; align-items: flex-end;
+      backdrop-filter: blur(4px);
+    }
+    #modal-overlay.open { display: flex; }
+    #modal {
+      background: var(--bg2);
+      border: 0.5px solid var(--border2);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-height: 80vh;
+      padding: 20px;
+      padding-bottom: calc(20px + var(--safe-bot));
+      animation: slideUp 0.3s ease;
+      overflow-y: auto;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 16px; }
+    .form-field { margin-bottom: 14px; }
+    .form-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; display: block; }
+    .form-input {
+      width: 100%;
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+    }
+    .form-input:focus { border-color: rgba(232,184,109,0.4); }
+    .btn-primary {
+      width: 100%; padding: 14px;
+      background: var(--accent);
+      border: none; border-radius: var(--radius-sm);
+      color: #1a1208; font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; margin-top: 8px;
+    }
+    .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+    /* LOCATION BANNER */
+    #location-banner {
+      background: rgba(74,158,255,0.1);
+      border: 0.5px solid rgba(74,158,255,0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    #location-banner.hidden { display: none; }
+
+    /* API KEY NOTICE */
+    #api-notice {
+      background: rgba(232,184,109,0.1);
+      border: 0.5px solid rgba(232,184,109,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: var(--accent2);
+      display: none;
+    }
+    #api-notice.visible { display: block; }
+
+    /* Scrollbar hide for webkit */
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; }
+  </style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-icon">✈️</div>
+  <div class="splash-title">Trip Wizard</div>
+  <div class="splash-sub">Your AI travel companion</div>
+  <div class="splash-loader"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-left">
+    <div class="header-logo">✈ Trip Wizard</div>
+  </div>
+  <div id="header-dest" class="header-dest">
+    <strong id="header-city">Amsterdam</strong>
+  </div>
+  <div class="header-actions">
+    <div class="icon-btn" onclick="openSettings()">⚙️</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- HOME SCREEN -->
+  <div id="screen-home" class="screen active">
+    <div class="hero-card">
+      <div class="hero-greeting">Your journey to</div>
+      <div class="hero-city" id="hero-city">Amsterdam</div>
+      <div class="hero-dates" id="hero-dates"><strong>Set your dates</strong> in Settings ↗</div>
+      <div class="hero-meta">
+        <div class="pill" id="hotel-pill">🏨 Add hotel</div>
+        <div class="pill accent" id="days-pill">📅 Plan trip</div>
+      </div>
+    </div>
+
+    <div id="location-banner" onclick="requestLocation()">
+      <span style="font-size:20px">📍</span>
+      <div>
+        <div style="font-size:13px;font-weight:500">Enable location</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Get real-time nearby recommendations</div>
+      </div>
+      <span style="margin-left:auto;color:var(--blue);font-size:12px">Allow →</span>
+    </div>
+
+    <div id="weather-section"></div>
+
+    <div class="section-label">Quick actions</div>
+    <div class="quick-grid">
+      <div class="quick-btn" onclick="switchTab('chat'); quickPrompt('Find me the best restaurants near my hotel in Amsterdam tonight')">
+        <div class="quick-btn-icon">🍽️</div>
+        <div class="quick-btn-label">Restaurants</div>
+        <div class="quick-btn-sub">Find dinner spots</div>
+      </div>
+      <div class="quick-btn" onclick="switchTab('chat'); quickPrompt('Suggest a walking route from my hotel to the main sights in Amsterdam')">
+        <div class="quick-btn-icon">🗺️</div>
+        <div class="quick-btn-label">Routes</div>
+        <div class="quick-btn-sub">Plan your day</div>
+      </div>
+      <div class="quick-btn" onclick="switchTab('chat'); quickPrompt('What are the top hidden gems and local tips for Amsterdam that tourists usually miss?')">
+        <div class="quick-btn-icon">💎</div>
+        <div class="quick-btn-label">Local tips</div>
+        <div class="quick-btn-sub">Hidden gems</div>
+      </div>
+      <div class="quick-btn" onclick="switchTab('chat'); quickPrompt('What is the weather forecast for Amsterdam this week and what should I pack?')">
+        <div class="quick-btn-icon">🌤️</div>
+        <div class="quick-btn-label">Weather</div>
+        <div class="quick-btn-sub">What to pack</div>
+      </div>
+    </div>
+
+    <div class="section-label">Today's highlights</div>
+    <div class="card">
+      <div style="text-align:center;padding:20px 0;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:8px">🏛️</div>
+        <div style="font-size:14px">No itinerary yet</div>
+        <div style="font-size:12px;margin-top:4px">Add events in the <strong style="color:var(--text2)">Plan</strong> tab or ask your AI wizard</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT SCREEN -->
+  <div id="screen-chat" class="screen" style="padding-bottom: calc(140px + var(--safe-bot))">
+    <div id="api-notice" class="visible">
+      ⚠️ Add your Anthropic API key in <strong>Settings</strong> to enable AI responses.
+    </div>
+    <div id="chat-messages">
+      <div class="msg ai">
+        <div class="msg-avatar">🧙</div>
+        <div class="msg-bubble">
+          Hallo! I'm your Amsterdam trip wizard. 🌷<br><br>
+          I know your trip details and can help you plan routes, find restaurants, discover hidden gems, and make the most of every moment in Amsterdam.<br><br>
+          What would you like to explore?
+        </div>
+        <div class="msg-time">Now</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN SCREEN -->
+  <div id="screen-plan" class="screen">
+    <div class="section-label">Trip itinerary</div>
+    <div id="itinerary-container">
+      <div class="card" style="text-align:center;padding:24px">
+        <div style="font-size:32px;margin-bottom:10px">📅</div>
+        <div style="font-size:14px">No days planned yet</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">Set your travel dates in Settings,<br>then add events for each day</div>
+        <button class="btn-primary" style="margin-top:16px;font-size:13px;padding:10px" onclick="openSettings()">Set travel dates</button>
+      </div>
+    </div>
+    <button class="btn-primary" id="add-day-btn" style="display:none" onclick="addDay()">+ Add day</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="screen-settings" class="screen">
+    <div class="section-label">Trip details</div>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Destination</div>
+          <div class="settings-sub">City you're visiting</div>
+        </div>
+        <input class="settings-input" id="s-city" placeholder="Amsterdam" oninput="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Hotel / Accommodation</div>
+          <div class="settings-sub">Used for route planning</div>
+        </div>
+        <input class="settings-input" id="s-hotel" placeholder="Hotel name" oninput="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Arrival date</div></div>
+        <input class="settings-input" id="s-arrive" type="date" oninput="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Departure date</div></div>
+        <input class="settings-input" id="s-depart" type="date" oninput="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Travel party</div></div>
+        <input class="settings-input" id="s-party" placeholder="e.g. 2 adults" oninput="saveSettings()" />
+      </div>
+    </div>
+
+    <div class="section-label">Preferences</div>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div><div class="settings-label">Food preferences</div><div class="settings-sub">Dietary needs, favourites</div></div>
+        <input class="settings-input" id="s-food" placeholder="e.g. vegetarian" oninput="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Budget level</div></div>
+        <select class="settings-input" id="s-budget" onchange="saveSettings()" style="text-align:right">
+          <option value="">Not set</option>
+          <option value="budget">Budget 💰</option>
+          <option value="mid">Mid-range 💰💰</option>
+          <option value="luxury">Luxury 💰💰💰</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Interests</div><div class="settings-sub">Art, history, nightlife, etc.</div></div>
+        <input class="settings-input" id="s-interests" placeholder="museums, cycling" oninput="saveSettings()" />
+      </div>
+    </div>
+
+    <div class="section-label">AI configuration</div>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Anthropic API key</div>
+          <div class="settings-sub">Powers your AI wizard</div>
+        </div>
+        <input class="settings-input" id="s-apikey" type="password" placeholder="sk-ant-..." oninput="saveSettings()" />
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:20px;padding:0 4px">
+      Your API key is stored locally on your device only. Get a key at console.anthropic.com
+    </div>
+
+    <button class="btn-primary" onclick="clearData()" style="background:transparent;border:0.5px solid var(--border2);color:var(--text2)">
+      Clear all data
+    </button>
+  </div>
+
+</div>
+
+<!-- TAB BAR -->
+<div id="tabbar">
+  <div class="tab-item active" data-tab="home" onclick="switchTab('home')">
+    <div class="tab-icon">🏠</div>
+    <div class="tab-label">Home</div>
+  </div>
+  <div class="tab-item" data-tab="chat" onclick="switchTab('chat')">
+    <div class="tab-icon">🧙</div>
+    <div class="tab-label">Wizard</div>
+  </div>
+  <div class="tab-item" data-tab="plan" onclick="switchTab('plan')">
+    <div class="tab-icon">📅</div>
+    <div class="tab-label">Plan</div>
+  </div>
+  <div class="tab-item" data-tab="settings" onclick="switchTab('settings')">
+    <div class="tab-icon">⚙️</div>
+    <div class="tab-label">Settings</div>
+  </div>
+</div>
+
+<!-- CHAT INPUT (appears over tabbar when on chat tab) -->
+<div class="chat-suggestions" id="chat-suggestions">
+  <div class="suggestion-chip" onclick="quickPrompt('Best local restaurants for dinner tonight')">🍽️ Dinner spots</div>
+  <div class="suggestion-chip" onclick="quickPrompt('Walking route to top sights from my hotel')">🗺️ Walking route</div>
+  <div class="suggestion-chip" onclick="quickPrompt('What hidden gems should I visit in Amsterdam?')">💎 Hidden gems</div>
+  <div class="suggestion-chip" onclick="quickPrompt('Best canal boat tour options')">🚢 Canal tours</div>
+  <div class="suggestion-chip" onclick="quickPrompt('Museum tips and which to prioritise')">🏛️ Museums</div>
+  <div class="suggestion-chip" onclick="quickPrompt('Amsterdam nightlife recommendations')">🌙 Nightlife</div>
+</div>
+<div id="chat-input-bar">
+  <textarea id="chat-input" rows="1" placeholder="Ask your wizard…" onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+  <button id="send-btn" onclick="sendMessage()">➤</button>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <div class="modal-handle"></div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+  // ─── STATE ────────────────────────────────────────────────────
+  let settings = {};
+  let itinerary = [];
+  let userLocation = null;
+  let currentTab = 'home';
+  let chatHistory = [];
+  let isTyping = false;
+
+  // ─── INIT ─────────────────────────────────────────────────────
+  window.addEventListener('load', () => {
+    loadData();
+    setTimeout(() => {
+      document.getElementById('splash').classList.add('hidden');
+    }, 1600);
+    updateHome();
+    renderItinerary();
+    loadSettingsForm();
+    checkApiKey();
+  });
+
+  // ─── STORAGE ──────────────────────────────────────────────────
+  function loadData() {
+    try {
+      settings = JSON.parse(localStorage.getItem('tw_settings') || '{}');
+      itinerary = JSON.parse(localStorage.getItem('tw_itinerary') || '[]');
+    } catch(e) {}
+  }
+
+  function saveSettings() {
+    settings.city    = document.getElementById('s-city').value || 'Amsterdam';
+    settings.hotel   = document.getElementById('s-hotel').value;
+    settings.arrive  = document.getElementById('s-arrive').value;
+    settings.depart  = document.getElementById('s-depart').value;
+    settings.party   = document.getElementById('s-party').value;
+    settings.food    = document.getElementById('s-food').value;
+    settings.budget  = document.getElementById('s-budget').value;
+    settings.interests = document.getElementById('s-interests').value;
+    settings.apiKey  = document.getElementById('s-apikey').value;
+    localStorage.setItem('tw_settings', JSON.stringify(settings));
+    updateHome();
+    checkApiKey();
+  }
+
+  function loadSettingsForm() {
+    document.getElementById('s-city').value      = settings.city || '';
+    document.getElementById('s-hotel').value     = settings.hotel || '';
+    document.getElementById('s-arrive').value    = settings.arrive || '';
+    document.getElementById('s-depart').value    = settings.depart || '';
+    document.getElementById('s-party').value     = settings.party || '';
+    document.getElementById('s-food').value      = settings.food || '';
+    document.getElementById('s-budget').value    = settings.budget || '';
+    document.getElementById('s-interests').value = settings.interests || '';
+    document.getElementById('s-apikey').value    = settings.apiKey || '';
+  }
+
+  function clearData() {
+    if (!confirm('Clear all trip data?')) return;
+    localStorage.clear();
+    settings = {}; itinerary = [];
+    loadSettingsForm();
+    updateHome();
+    renderItinerary();
+  }
+
+  function checkApiKey() {
+    const notice = document.getElementById('api-notice');
+    if (settings.apiKey && settings.apiKey.startsWith('sk-ant-')) {
+      notice.classList.remove('visible');
+    } else {
+      notice.classList.add('visible');
+    }
+  }
+
+  // ─── HOME ─────────────────────────────────────────────────────
+  function updateHome() {
+    const city = settings.city || 'Amsterdam';
+    document.getElementById('hero-city').textContent = city;
+    document.getElementById('header-city').textContent = city;
+
+    if (settings.arrive && settings.depart) {
+      const a = new Date(settings.arrive), d = new Date(settings.depart);
+      const days = Math.round((d - a) / 86400000);
+      document.getElementById('hero-dates').innerHTML =
+        `<strong>${fmtDate(a)}</strong> → <strong>${fmtDate(d)}</strong> &nbsp;·&nbsp; ${days} nights`;
+      document.getElementById('days-pill').textContent = `📅 ${days} nights`;
+    }
+
+    if (settings.hotel) {
+      document.getElementById('hotel-pill').textContent = `🏨 ${settings.hotel}`;
+    }
+  }
+
+  function fmtDate(d) {
+    return d.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+  }
+
+  // ─── TABS ─────────────────────────────────────────────────────
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + tab).classList.add('active');
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+
+    const chatBar = document.getElementById('chat-input-bar');
+    const chatSug = document.getElementById('chat-suggestions');
+    const tabBar  = document.getElementById('tabbar');
+
+    if (tab === 'chat') {
+      chatBar.classList.add('visible');
+      chatSug.classList.add('visible');
+      tabBar.style.display = 'none';
+      scrollChat();
+    } else {
+      chatBar.classList.remove('visible');
+      chatSug.classList.remove('visible');
+      tabBar.style.display = 'flex';
+    }
+  }
+
+  // ─── CHAT ─────────────────────────────────────────────────────
+  function buildSystemPrompt() {
+    const city = settings.city || 'Amsterdam';
+    let ctx = `You are an expert AI travel wizard for ${city}. You are knowledgeable, friendly, and give specific, actionable advice.`;
+    if (settings.hotel)     ctx += ` The user is staying at: ${settings.hotel}.`;
+    if (settings.arrive)    ctx += ` Arrival: ${settings.arrive}.`;
+    if (settings.depart)    ctx += ` Departure: ${settings.depart}.`;
+    if (settings.party)     ctx += ` Travel party: ${settings.party}.`;
+    if (settings.food)      ctx += ` Food preferences: ${settings.food}.`;
+    if (settings.budget)    ctx += ` Budget level: ${settings.budget}.`;
+    if (settings.interests) ctx += ` Interests: ${settings.interests}.`;
+    if (userLocation)       ctx += ` User's current GPS location: ${userLocation.lat.toFixed(4)}, ${userLocation.lon.toFixed(4)}.`;
+    ctx += ` Keep responses concise and practical. Use emoji sparingly but helpfully. When suggesting places, include the neighbourhood and a brief reason why. Format lists clearly.`;
+    return ctx;
+  }
+
+  function quickPrompt(text) {
+    switchTab('chat');
+    setTimeout(() => {
+      document.getElementById('chat-input').value = text;
+      sendMessage();
+    }, 100);
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text || isTyping) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+
+    addMsg('user', text);
+    chatHistory.push({ role: 'user', content: text });
+
+    if (!settings.apiKey || !settings.apiKey.startsWith('sk-ant-')) {
+      addMsg('ai', '🔑 Please add your Anthropic API key in Settings to enable AI responses. Your key is stored only on your device.');
+      return;
+    }
+
+    showTyping();
+    document.getElementById('send-btn').disabled = true;
+    isTyping = true;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: buildSystemPrompt(),
+          messages: chatHistory.slice(-20)
+        })
+      });
+
+      const data = await resp.json();
+      hideTyping();
+
+      if (data.content && data.content[0]) {
+        const reply = data.content[0].text;
+        chatHistory.push({ role: 'assistant', content: reply });
+        addMsg('ai', reply);
+      } else {
+        addMsg('ai', '⚠️ Something went wrong. Please try again. ' + (data.error?.message || ''));
+      }
+    } catch(e) {
+      hideTyping();
+      addMsg('ai', '⚠️ Connection error. Check your internet and API key.');
+    }
+
+    isTyping = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  function addMsg(role, text) {
+    const msgs = document.getElementById('chat-messages');
+    const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+
+    const formattedText = text.replace(/\n/g, '<br>');
+
+    div.innerHTML = `
+      ${role === 'ai' ? '<div class="msg-avatar">🧙</div>' : ''}
+      <div class="msg-bubble">${formattedText}</div>
+      <div class="msg-time">${now}</div>
+    `;
+    msgs.appendChild(div);
+    scrollChat();
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.id = 'typing';
+    div.className = 'typing-indicator';
+    div.innerHTML = `<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>`;
+    msgs.appendChild(div);
+    scrollChat();
+  }
+
+  function hideTyping() {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+  }
+
+  function scrollChat() {
+    setTimeout(() => {
+      const msgs = document.getElementById('chat-messages');
+      msgs.scrollTop = msgs.scrollHeight;
+      window.scrollTo(0, document.body.scrollHeight);
+    }, 50);
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // ─── ITINERARY ────────────────────────────────────────────────
+  function renderItinerary() {
+    const container = document.getElementById('itinerary-container');
+    const addBtn = document.getElementById('add-day-btn');
+
+    if (itinerary.length === 0) {
+      container.innerHTML = `
+        <div class="card" style="text-align:center;padding:24px">
+          <div style="font-size:32px;margin-bottom:10px">📅</div>
+          <div style="font-size:14px">No days planned yet</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px">Set your travel dates in Settings,<br>then add events for each day</div>
+          <button class="btn-primary" style="margin-top:16px;font-size:13px;padding:10px" onclick="startPlan()">Start planning</button>
+        </div>`;
+      addBtn.style.display = 'none';
+      return;
+    }
+
+    addBtn.style.display = 'block';
+    container.innerHTML = itinerary.map((day, i) => `
+      <div class="day-card">
+        <div class="day-header" onclick="toggleDay(${i})">
+          <div>
+            <div class="day-number">Day ${i+1} · ${day.date || ''}</div>
+            <div class="day-title">${day.title || 'Untitled day'}</div>
+          </div>
+          <span style="color:var(--text3);font-size:18px" id="day-arrow-${i}">›</span>
+        </div>
+        <div class="day-body" id="day-body-${i}">
+          ${day.events.length === 0 ? '<div style="font-size:13px;color:var(--text3);padding:8px 0">No events yet</div>' : ''}
+          ${day.events.map((ev, j) => `
+            <div class="event-item">
+              <div class="event-time">${ev.time || ''}</div>
+              <div class="event-icon">${ev.icon || '📍'}</div>
+              <div class="event-info">
+                <div class="event-name">${ev.name}</div>
+                ${ev.note ? `<div class="event-sub">${ev.note}</div>` : ''}
+              </div>
+              <div onclick="removeEvent(${i},${j})" style="color:var(--text3);cursor:pointer;padding:4px">✕</div>
+            </div>
+          `).join('')}
+          <div class="add-event-btn" onclick="openAddEvent(${i})">+ Add event</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleDay(i) {
+    const body = document.getElementById('day-body-' + i);
+    const arrow = document.getElementById('day-arrow-' + i);
+    const open = body.classList.toggle('open');
+    arrow.textContent = open ? '⌄' : '›';
+  }
+
+  function startPlan() {
+    if (settings.arrive) {
+      const date = new Date(settings.arrive);
+      itinerary.push({ date: fmtDate(date), title: 'Day 1', events: [] });
+    } else {
+      itinerary.push({ date: '', title: 'Day 1', events: [] });
+    }
+    localStorage.setItem('tw_itinerary', JSON.stringify(itinerary));
+    renderItinerary();
+    setTimeout(() => toggleDay(0), 100);
+  }
+
+  function addDay() {
+    const last = itinerary[itinerary.length - 1];
+    itinerary.push({ date: '', title: `Day ${itinerary.length + 1}`, events: [] });
+    localStorage.setItem('tw_itinerary', JSON.stringify(itinerary));
+    renderItinerary();
+    setTimeout(() => toggleDay(itinerary.length - 1), 100);
+  }
+
+  function openAddEvent(dayIdx) {
+    document.getElementById('modal-content').innerHTML = `
+      <div class="modal-title">Add event — Day ${dayIdx + 1}</div>
+      <div class="form-field">
+        <label class="form-label">Event name</label>
+        <input class="form-input" id="ev-name" placeholder="e.g. Rijksmuseum visit" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Time (optional)</label>
+        <input class="form-input" id="ev-time" type="time" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Icon</label>
+        <input class="form-input" id="ev-icon" placeholder="🏛️ 🍽️ 🚢 🎭 …" maxlength="4" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Note (optional)</label>
+        <input class="form-input" id="ev-note" placeholder="Address, tips, booking info…" />
+      </div>
+      <button class="btn-primary" onclick="addEvent(${dayIdx})">Add to itinerary</button>
+    `;
+    document.getElementById('modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ev-name').focus(), 100);
+  }
+
+  function addEvent(dayIdx) {
+    const name = document.getElementById('ev-name').value.trim();
+    if (!name) return;
+    itinerary[dayIdx].events.push({
+      name,
+      time: document.getElementById('ev-time').value,
+      icon: document.getElementById('ev-icon').value || '📍',
+      note: document.getElementById('ev-note').value
+    });
+    localStorage.setItem('tw_itinerary', JSON.stringify(itinerary));
+    closeModal();
+    renderItinerary();
+    setTimeout(() => toggleDay(dayIdx), 100);
+  }
+
+  function removeEvent(dayIdx, evIdx) {
+    itinerary[dayIdx].events.splice(evIdx, 1);
+    localStorage.setItem('tw_itinerary', JSON.stringify(itinerary));
+    renderItinerary();
+    setTimeout(() => toggleDay(dayIdx), 100);
+  }
+
+  // ─── LOCATION ─────────────────────────────────────────────────
+  function requestLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      document.getElementById('location-banner').classList.add('hidden');
+      fetchWeather(userLocation.lat, userLocation.lon);
+    }, () => {});
+  }
+
+  async function fetchWeather(lat, lon) {
+    try {
+      const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`);
+      const d = await resp.json();
+      const temp = Math.round(d.current.temperature_2m);
+      const wind = Math.round(d.current.windspeed_10m);
+      const max  = Math.round(d.daily.temperature_2m_max[0]);
+      const min  = Math.round(d.daily.temperature_2m_min[0]);
+      const code = d.current.weathercode;
+      const wIcon = weatherIcon(code);
+      const wDesc = weatherDesc(code);
+      document.getElementById('weather-section').innerHTML = `
+        <div class="weather-bar">
+          <div class="weather-icon">${wIcon}</div>
+          <div class="weather-info">
+            <div class="weather-temp">${temp}°C</div>
+            <div class="weather-desc">${wDesc}</div>
+          </div>
+          <div class="weather-detail">
+            ↑${max}° ↓${min}°<br>
+            💨 ${wind} km/h
+          </div>
+        </div>`;
+    } catch(e) {}
+  }
+
+  function weatherIcon(code) {
+    if (code === 0) return '☀️';
+    if (code <= 3)  return '⛅';
+    if (code <= 48) return '🌫️';
+    if (code <= 67) return '🌧️';
+    if (code <= 77) return '❄️';
+    if (code <= 82) return '🌦️';
+    return '⛈️';
+  }
+  function weatherDesc(code) {
+    if (code === 0) return 'Clear sky';
+    if (code <= 3)  return 'Partly cloudy';
+    if (code <= 48) return 'Fog';
+    if (code <= 67) return 'Rain';
+    if (code <= 77) return 'Snow';
+    if (code <= 82) return 'Showers';
+    return 'Thunderstorm';
+  }
+
+  // ─── MODAL ────────────────────────────────────────────────────
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('modal-overlay')) {
+      document.getElementById('modal-overlay').classList.remove('open');
+    }
+  }
+
+  function openSettings() {
+    switchTab('settings');
+  }
+
+  // ─── SERVICE WORKER (PWA) ─────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
