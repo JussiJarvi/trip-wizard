@@ -432,6 +432,25 @@
       width: 160px;
     }
     .settings-input::placeholder { color: var(--text3); }
+    .counter-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--card2);
+      color: var(--text); font-size: 16px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .counter-input {
+      background: transparent; border: none; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+      text-align: center; outline: none; width: 28px;
+    }
+    .counter-input::-webkit-inner-spin-button,
+    .counter-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .child-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 12px; margin-top: 12px;
+      border-top: 0.5px solid var(--border);
+    }
 
     /* MODAL */
     #modal-overlay {
@@ -652,9 +671,24 @@
         <div><div class="settings-label">Departure date</div></div>
         <input class="settings-input" id="s-depart" type="date" oninput="saveSettings()" />
       </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Travel party</div></div>
-        <input class="settings-input" id="s-party" placeholder="e.g. 2 adults" oninput="saveSettings()" />
+      <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="settings-label">Adults</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="counter-btn" onclick="adjustParty('adults',-1)">−</button>
+            <input class="counter-input" id="p-adults" type="number" min="0" value="1" oninput="onPartyInput('adults')" />
+            <button class="counter-btn" onclick="adjustParty('adults',1)">+</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+          <div class="settings-label">Children</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="counter-btn" onclick="adjustParty('children',-1)">−</button>
+            <input class="counter-input" id="p-children" type="number" min="0" value="0" oninput="onPartyInput('children')" />
+            <button class="counter-btn" onclick="adjustParty('children',1)">+</button>
+          </div>
+        </div>
+        <div id="p-children-list"></div>
       </div>
     </div>
 
@@ -747,6 +781,7 @@
   let settings = {};
   let itinerary = [];
   let userLocation = null;
+  let partyData = { adults: 1, children: [] };
   let currentTab = 'home';
   let chatHistory = [];
   let isTyping = false;
@@ -763,11 +798,81 @@
     checkApiKey();
   });
 
+  // ─── PARTY ────────────────────────────────────────────────────
+  function adjustParty(type, delta) {
+    if (type === 'adults') {
+      partyData.adults = Math.max(0, partyData.adults + delta);
+      document.getElementById('p-adults').value = partyData.adults;
+    } else {
+      const newCount = Math.max(0, partyData.children.length + delta);
+      while (partyData.children.length < newCount) partyData.children.push({ age: '', gender: '' });
+      while (partyData.children.length > newCount) partyData.children.pop();
+      document.getElementById('p-children').value = partyData.children.length;
+      renderChildrenList();
+    }
+    saveSettings();
+  }
+
+  function onPartyInput(type) {
+    if (type === 'adults') {
+      partyData.adults = Math.max(0, parseInt(document.getElementById('p-adults').value) || 0);
+    } else {
+      const newCount = Math.max(0, parseInt(document.getElementById('p-children').value) || 0);
+      while (partyData.children.length < newCount) partyData.children.push({ age: '', gender: '' });
+      while (partyData.children.length > newCount) partyData.children.pop();
+      renderChildrenList();
+    }
+    saveSettings();
+  }
+
+  function updateChild(i, field, value) {
+    partyData.children[i][field] = value;
+    saveSettings();
+  }
+
+  function renderChildrenList() {
+    const list = document.getElementById('p-children-list');
+    if (!list) return;
+    if (partyData.children.length === 0) { list.innerHTML = ''; return; }
+    list.innerHTML = partyData.children.map((child, i) => `
+      <div class="child-row">
+        <div class="settings-label" style="color:var(--text2)">Child ${i + 1}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="settings-input" style="width:52px" type="number" min="0" max="17"
+            placeholder="Age" value="${child.age || ''}"
+            oninput="updateChild(${i},'age',this.value)" />
+          <select class="settings-input" style="width:76px" onchange="updateChild(${i},'gender',this.value)">
+            <option value="">Gender</option>
+            <option value="boy" ${child.gender === 'boy' ? 'selected' : ''}>Boy</option>
+            <option value="girl" ${child.gender === 'girl' ? 'selected' : ''}>Girl</option>
+            <option value="other" ${child.gender === 'other' ? 'selected' : ''}>Other</option>
+          </select>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function partyToString(p) {
+    const parts = [];
+    if (p.adults > 0) parts.push(`${p.adults} adult${p.adults !== 1 ? 's' : ''}`);
+    if (p.children.length > 0) {
+      const childDescs = p.children.map(c => {
+        const bits = [c.gender || ''].filter(Boolean);
+        if (c.age) bits.push(`age ${c.age}`);
+        return bits.length ? `(${bits.join(', ')})` : '';
+      });
+      const childStr = childDescs.filter(Boolean).join(', ');
+      parts.push(`${p.children.length} child${p.children.length !== 1 ? 'ren' : ''}${childStr ? ': ' + childStr : ''}`);
+    }
+    return parts.join(', ');
+  }
+
   // ─── STORAGE ──────────────────────────────────────────────────
   function loadData() {
     try {
       settings = JSON.parse(localStorage.getItem('tw_settings') || '{}');
       itinerary = JSON.parse(localStorage.getItem('tw_itinerary') || '[]');
+      partyData = settings.partyData || { adults: 1, children: [] };
     } catch(e) {}
   }
 
@@ -786,7 +891,8 @@
         document.getElementById('s-depart').value = settings.depart;
       }
     }
-    settings.party   = document.getElementById('s-party').value;
+    settings.partyData = partyData;
+    settings.party = partyToString(partyData);
     settings.food    = document.getElementById('s-food').value;
     settings.budget  = document.getElementById('s-budget').value;
     settings.interests = document.getElementById('s-interests').value;
@@ -801,7 +907,10 @@
     document.getElementById('s-hotel').value     = settings.hotel || '';
     document.getElementById('s-arrive').value    = settings.arrive || '';
     document.getElementById('s-depart').value    = settings.depart || '';
-    document.getElementById('s-party').value     = settings.party || '';
+    partyData = settings.partyData || { adults: 1, children: [] };
+    document.getElementById('p-adults').value   = partyData.adults;
+    document.getElementById('p-children').value = partyData.children.length;
+    renderChildrenList();
     document.getElementById('s-food').value      = settings.food || '';
     document.getElementById('s-budget').value    = settings.budget || '';
     document.getElementById('s-interests').value = settings.interests || '';
