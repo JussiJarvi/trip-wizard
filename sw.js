@@ -1,10 +1,10 @@
-const CACHE = 'trip-wizard-v1';
+const CACHE = 'trip-wizard-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.svg',
-  '/icon-512.svg'
+  '/trip-wizard/',
+  '/trip-wizard/index.html',
+  '/trip-wizard/manifest.json',
+  '/trip-wizard/icon-192.svg',
+  '/trip-wizard/icon-512.svg'
 ];
 
 self.addEventListener('install', e => {
@@ -30,6 +30,12 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
