@@ -1118,12 +1118,25 @@
 
   // ─── LOCATION ─────────────────────────────────────────────────
   function requestLocation() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-      userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-      document.getElementById('location-banner').classList.add('hidden');
-      fetchWeather(userLocation.lat, userLocation.lon);
-    }, () => {});
+    if (!navigator.geolocation) {
+      document.getElementById('location-banner').innerHTML = '<div style="font-size:13px;font-weight:500">Location not supported on this device</div>';
+      return;
+    }
+    const banner = document.getElementById('location-banner');
+    banner.innerHTML = '<div style="font-size:13px;font-weight:500">Requesting location…</div>';
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        banner.classList.add('hidden');
+        fetchWeather(userLocation.lat, userLocation.lon);
+      },
+      err => {
+        const msg = err.code === 1 ? 'Location access denied' : 'Could not get location';
+        banner.innerHTML = `<div style="font-size:13px;font-weight:500">${msg} — tap to retry</div>`;
+        banner.onclick = requestLocation;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   }
 
   async function fetchWeather(lat, lon) {
