@@ -776,6 +776,16 @@
     settings.hotel   = document.getElementById('s-hotel').value;
     settings.arrive  = document.getElementById('s-arrive').value;
     settings.depart  = document.getElementById('s-depart').value;
+    if (settings.arrive) {
+      const arriveDate = new Date(settings.arrive);
+      const departDate = settings.depart ? new Date(settings.depart) : null;
+      if (!departDate || departDate <= arriveDate) {
+        const next = new Date(arriveDate);
+        next.setDate(next.getDate() + 1);
+        settings.depart = next.toISOString().slice(0, 10);
+        document.getElementById('s-depart').value = settings.depart;
+      }
+    }
     settings.party   = document.getElementById('s-party').value;
     settings.food    = document.getElementById('s-food').value;
     settings.budget  = document.getElementById('s-budget').value;
