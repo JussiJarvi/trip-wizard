@@ -37,7 +37,7 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     /* Prevent iOS Safari auto-zoom on input focus (requires font-size ≥ 16px) */
-    input, textarea, select { font-size: 16px; }
+    input, textarea, select { font-size: 16px !important; }
 
     body {
       background: var(--bg);
@@ -290,6 +290,36 @@
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+    /* CHAT HEADER */
+    #chat-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 102;
+      padding: calc(var(--safe-top) + 10px) 16px 10px;
+      background: rgba(15,15,26,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid var(--border);
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+    #chat-header.visible { display: flex; }
+    #chat-header-back {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      color: var(--text);
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    #chat-header-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 17px;
+    }
 
     /* CHAT INPUT */
     #chat-input-bar {
@@ -642,8 +672,14 @@
     </div>
   </div>
 
+  <!-- CHAT HEADER -->
+  <div id="chat-header">
+    <div id="chat-header-back" onclick="switchTab('home')">‹</div>
+    <div id="chat-header-title">AI Wizard</div>
+  </div>
+
   <!-- CHAT SCREEN -->
-  <div id="screen-chat" class="screen" style="padding-bottom: calc(140px + var(--safe-bot))">
+  <div id="screen-chat" class="screen" style="padding-top: calc(var(--safe-top) + 64px); padding-bottom: calc(140px + var(--safe-bot))">
     <div id="api-notice" class="visible">
       ⚠️ Add your Anthropic API key in <strong>Settings</strong> to enable AI responses.
     </div>
@@ -769,7 +805,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.2.1
+      v1.2.2
     </div>
   </div>
 
@@ -1020,18 +1056,21 @@
     document.getElementById('screen-' + tab).classList.add('active');
     document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
-    const chatBar = document.getElementById('chat-input-bar');
-    const chatSug = document.getElementById('chat-suggestions');
-    const tabBar  = document.getElementById('tabbar');
+    const chatBar    = document.getElementById('chat-input-bar');
+    const chatSug    = document.getElementById('chat-suggestions');
+    const chatHeader = document.getElementById('chat-header');
+    const tabBar     = document.getElementById('tabbar');
 
     if (tab === 'chat') {
       chatBar.classList.add('visible');
       chatSug.classList.add('visible');
+      chatHeader.classList.add('visible');
       tabBar.style.display = 'none';
       scrollChat();
     } else {
       chatBar.classList.remove('visible');
       chatSug.classList.remove('visible');
+      chatHeader.classList.remove('visible');
       tabBar.style.display = 'flex';
     }
   }
