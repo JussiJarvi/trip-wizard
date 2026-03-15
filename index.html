@@ -452,6 +452,33 @@
       border-top: 0.5px solid var(--border);
     }
 
+    /* HOTEL AUTOCOMPLETE */
+    .hotel-wrap { position: relative; }
+    #hotel-dropdown {
+      position: absolute;
+      top: calc(100% + 4px); right: 0;
+      width: 240px;
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      z-index: 100;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    #hotel-dropdown.hidden { display: none; }
+    .hotel-opt {
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 0.5px solid var(--border);
+      line-height: 1.3;
+    }
+    .hotel-opt:last-child { border-bottom: none; }
+    .hotel-opt:active { background: var(--card); }
+    .hotel-opt-name { color: var(--text); }
+    .hotel-opt-addr { color: var(--text3); font-size: 11px; margin-top: 2px; }
+    #hotel-status { font-size: 13px; flex-shrink: 0; }
+
     /* MODAL */
     #modal-overlay {
       position: fixed; inset: 0; z-index: 200;
@@ -656,12 +683,21 @@
         </div>
         <input class="settings-input" id="s-city" placeholder="Amsterdam" oninput="saveSettings()" />
       </div>
-      <div class="settings-row">
+      <div class="settings-row" style="overflow:visible">
         <div>
           <div class="settings-label">Hotel / Accommodation</div>
           <div class="settings-sub">Used for route planning</div>
         </div>
-        <input class="settings-input" id="s-hotel" placeholder="Hotel name" oninput="saveSettings()" />
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="hotel-status"></span>
+          <div class="hotel-wrap">
+            <input class="settings-input" id="s-hotel" placeholder="Hotel name"
+              autocomplete="off"
+              oninput="hotelInput()"
+              onblur="hotelBlur()" />
+            <div id="hotel-dropdown" class="hidden"></div>
+          </div>
+        </div>
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Arrival date</div></div>
@@ -731,7 +767,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.1.1
+      v1.2.0
     </div>
   </div>
 
@@ -1249,6 +1285,81 @@
     localStorage.setItem('tw_itinerary', JSON.stringify(itinerary));
     renderItinerary();
     setTimeout(() => toggleDay(dayIdx), 100);
+  }
+
+  // ─── HOTEL AUTOCOMPLETE ───────────────────────────────────────
+  let hotelTimer = null;
+
+  function hotelInput() {
+    saveSettings();
+    clearTimeout(hotelTimer);
+    const val = document.getElementById('s-hotel').value.trim();
+    document.getElementById('hotel-status').textContent = '';
+    if (val.length < 3) { hideHotelDropdown(); return; }
+    hotelTimer = setTimeout(() => searchHotels(val), 400);
+  }
+
+  async function searchHotels(query) {
+    const city = (document.getElementById('s-city').value || '').trim();
+    const q = city ? `${query} ${city}` : query;
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const results = await res.json();
+      const hotels = results.filter(r => ['hotel','motel','hostel','guest_house','apartment'].includes(r.type) || r.class === 'tourism');
+      renderHotelDropdown(hotels.length ? hotels : results.slice(0, 4));
+    } catch { hideHotelDropdown(); }
+  }
+
+  function renderHotelDropdown(items) {
+    const dd = document.getElementById('hotel-dropdown');
+    if (!items.length) { hideHotelDropdown(); return; }
+    dd.innerHTML = items.map(item => {
+      const name = item.name || item.display_name.split(',')[0];
+      const addr = item.display_name.split(',').slice(1, 3).join(',').trim();
+      return `<div class="hotel-opt" onmousedown="selectHotel('${name.replace(/'/g,"\\'")}')">
+        <div class="hotel-opt-name">${name}</div>
+        <div class="hotel-opt-addr">${addr}</div>
+      </div>`;
+    }).join('');
+    dd.classList.remove('hidden');
+  }
+
+  function selectHotel(name) {
+    document.getElementById('s-hotel').value = name;
+    saveSettings();
+    hideHotelDropdown();
+    document.getElementById('hotel-status').textContent = '✓';
+    document.getElementById('hotel-status').style.color = 'var(--green)';
+  }
+
+  function hideHotelDropdown() {
+    document.getElementById('hotel-dropdown').classList.add('hidden');
+  }
+
+  async function hotelBlur() {
+    setTimeout(hideHotelDropdown, 150); // allow onmousedown to fire first
+    const val = document.getElementById('s-hotel').value.trim();
+    if (!val) { document.getElementById('hotel-status').textContent = ''; return; }
+    const statusEl = document.getElementById('hotel-status');
+    if (statusEl.textContent === '✓') return; // already validated via selection
+    // Validate: check if hotel exists in city
+    const city = (document.getElementById('s-city').value || '').trim();
+    try {
+      const q = city ? `${val} ${city}` : val;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const results = await res.json();
+      if (results.length) {
+        statusEl.textContent = '✓';
+        statusEl.style.color = 'var(--green)';
+      } else {
+        statusEl.textContent = '⚠';
+        statusEl.style.color = 'var(--accent)';
+      }
+    } catch {
+      statusEl.textContent = '';
+    }
   }
 
   // ─── LOCATION ─────────────────────────────────────────────────
