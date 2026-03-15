@@ -799,7 +799,20 @@
     renderItinerary();
     loadSettingsForm();
     checkApiKey();
+    autoLocation();
   });
+
+  function autoLocation() {
+    if (!navigator.geolocation) return;
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then(result => {
+        if (result.state === 'granted') {
+          requestLocation();
+        }
+        // 'prompt' or 'denied' → leave the banner for the user to tap
+      }).catch(() => { /* permissions API not supported */ });
+    }
+  }
 
   // ─── PARTY ────────────────────────────────────────────────────
   function adjustParty(type, delta) {
