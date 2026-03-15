@@ -612,6 +612,12 @@
   </div>
 </div>
 
+<!-- CHAT HEADER (sibling of #header so z-index works correctly) -->
+<div id="chat-header">
+  <div id="chat-header-back" onclick="switchTab('home')">‹</div>
+  <div id="chat-header-title">AI Wizard</div>
+</div>
+
 <!-- APP -->
 <div id="app">
 
@@ -670,12 +676,6 @@
         <div style="font-size:12px;margin-top:4px">Add events in the <strong style="color:var(--text2)">Plan</strong> tab or ask your AI wizard</div>
       </div>
     </div>
-  </div>
-
-  <!-- CHAT HEADER -->
-  <div id="chat-header">
-    <div id="chat-header-back" onclick="switchTab('home')">‹</div>
-    <div id="chat-header-title">AI Wizard</div>
   </div>
 
   <!-- CHAT SCREEN -->
@@ -805,7 +805,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.2.2
+      v1.2.3
     </div>
   </div>
 
@@ -1059,18 +1059,21 @@
     const chatBar    = document.getElementById('chat-input-bar');
     const chatSug    = document.getElementById('chat-suggestions');
     const chatHeader = document.getElementById('chat-header');
+    const mainHeader = document.getElementById('header');
     const tabBar     = document.getElementById('tabbar');
 
     if (tab === 'chat') {
       chatBar.classList.add('visible');
       chatSug.classList.add('visible');
       chatHeader.classList.add('visible');
+      mainHeader.style.display = 'none';
       tabBar.style.display = 'none';
       scrollChat();
     } else {
       chatBar.classList.remove('visible');
       chatSug.classList.remove('visible');
       chatHeader.classList.remove('visible');
+      mainHeader.style.display = '';
       tabBar.style.display = 'flex';
     }
   }
