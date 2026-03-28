@@ -805,7 +805,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.2.9
+      v1.3.0
     </div>
   </div>
 
@@ -1132,7 +1132,7 @@
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-opus-4-6',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
           system: buildSystemPrompt(),
           messages: chatHistory.slice(-20)
