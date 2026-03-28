@@ -45,7 +45,7 @@
       font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       min-height: 100dvh;
-      overflow-x: hidden;
+      overflow-x: clip;
     }
 
     /* Stars background */
@@ -805,7 +805,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.2.5
+      v1.2.7
     </div>
   </div>
 
@@ -1434,7 +1434,7 @@
 
   async function fetchWeather(lat, lon) {
     try {
-      const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`);
+      const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1&wind_speed_unit=ms`);
       const d = await resp.json();
       const temp = Math.round(d.current.temperature_2m);
       const wind = Math.round(d.current.windspeed_10m);
@@ -1452,7 +1452,7 @@
           </div>
           <div class="weather-detail">
             ↑${max}° ↓${min}°<br>
-            💨 ${wind} km/h
+            💨 ${wind} m/s
           </div>
         </div>`;
     } catch(e) {}
