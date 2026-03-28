@@ -408,14 +408,48 @@
     }
     #stop-btn.visible { display: flex; }
     #stop-btn:active { transform: scale(0.9); }
-    .topic-divider {
-      display: flex; align-items: center; gap: 10px;
-      margin: 20px 0 4px;
-      color: var(--text3); font-size: 11px;
+    #topic-tabs {
+      position: fixed;
+      top: calc(var(--safe-top) + 56px);
+      left: 0; right: 0;
+      z-index: 101;
+      display: none; align-items: center; gap: 6px;
+      overflow-x: auto;
+      padding: 8px 12px;
+      background: rgba(15,15,26,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid var(--border);
+      scrollbar-width: none;
     }
-    .topic-divider::before, .topic-divider::after {
-      content: ''; flex: 1; height: 0.5px; background: var(--border);
+    #topic-tabs.visible { display: flex; }
+    #topic-tabs::-webkit-scrollbar { display: none; }
+    .topic-tab {
+      flex-shrink: 0;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: var(--card2);
+      border: 0.5px solid var(--border2);
+      color: var(--text2);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
     }
+    .topic-tab.active {
+      background: rgba(232,184,109,0.15);
+      border-color: rgba(232,184,109,0.4);
+      color: var(--accent);
+    }
+    .topic-tab-add {
+      flex-shrink: 0;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--card2); border: 0.5px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; line-height: 1; color: var(--text3); cursor: pointer;
+    }
+    .topic-messages { display: none; }
+    .topic-messages.active { display: block; }
 
     /* TRIP PLANNER */
     .day-card {
@@ -634,6 +668,9 @@
   </div>
 </div>
 
+<!-- TOPIC TABS -->
+<div id="topic-tabs"></div>
+
 <!-- CHAT HEADER (sibling of #header so z-index works correctly) -->
 <div id="chat-header">
   <div id="chat-header-back" onclick="switchTab('home')">‹</div>
@@ -701,19 +738,21 @@
   </div>
 
   <!-- CHAT SCREEN -->
-  <div id="screen-chat" class="screen" style="padding-top: calc(var(--safe-top) + 64px); padding-bottom: calc(140px + var(--safe-bot))">
+  <div id="screen-chat" class="screen" style="padding-top: calc(var(--safe-top) + 108px); padding-bottom: calc(140px + var(--safe-bot))">
     <div id="api-notice" class="visible">
       ⚠️ Add your Anthropic API key in <strong>Settings</strong> to enable AI responses.
     </div>
     <div id="chat-messages">
-      <div class="msg ai">
-        <div class="msg-avatar">🧙</div>
-        <div class="msg-bubble">
-          Hallo! I'm your Amsterdam trip wizard. 🌷<br><br>
-          I know your trip details and can help you plan routes, find restaurants, discover hidden gems, and make the most of every moment in Amsterdam.<br><br>
-          What would you like to explore?
+      <div class="topic-messages" data-topic-id="0">
+        <div class="msg ai">
+          <div class="msg-avatar">🧙</div>
+          <div class="msg-bubble">
+            Hallo! I'm your Amsterdam trip wizard. 🌷<br><br>
+            I know your trip details and can help you plan routes, find restaurants, discover hidden gems, and make the most of every moment in Amsterdam.<br><br>
+            What would you like to explore?
+          </div>
+          <div class="msg-time">Now</div>
         </div>
-        <div class="msg-time">Now</div>
       </div>
     </div>
   </div>
@@ -827,7 +866,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.3.1
+      v1.3.2
     </div>
   </div>
 
@@ -855,12 +894,12 @@
 
 <!-- CHAT INPUT (appears over tabbar when on chat tab) -->
 <div class="chat-suggestions" id="chat-suggestions">
-  <div class="suggestion-chip" onclick="quickPrompt('Best local restaurants for dinner tonight')">🍽️ Dinner spots</div>
-  <div class="suggestion-chip" onclick="quickPrompt('Walking route to top sights from my hotel')">🗺️ Walking route</div>
-  <div class="suggestion-chip" onclick="quickPrompt('What hidden gems should I visit in Amsterdam?')">💎 Hidden gems</div>
-  <div class="suggestion-chip" onclick="quickPrompt('Best canal boat tour options')">🚢 Canal tours</div>
-  <div class="suggestion-chip" onclick="quickPrompt('Museum tips and which to prioritise')">🏛️ Museums</div>
-  <div class="suggestion-chip" onclick="quickPrompt('Amsterdam nightlife recommendations')">🌙 Nightlife</div>
+  <div class="suggestion-chip" onclick="quickPrompt('🍽️ Dinner spots','Best local restaurants for dinner tonight')">🍽️ Dinner spots</div>
+  <div class="suggestion-chip" onclick="quickPrompt('🗺️ Walking route','Walking route to top sights from my hotel')">🗺️ Walking route</div>
+  <div class="suggestion-chip" onclick="quickPrompt('💎 Hidden gems','What hidden gems should I visit in Amsterdam?')">💎 Hidden gems</div>
+  <div class="suggestion-chip" onclick="quickPrompt('🚢 Canal tours','Best canal boat tour options')">🚢 Canal tours</div>
+  <div class="suggestion-chip" onclick="quickPrompt('🏛️ Museums','Museum tips and which to prioritise')">🏛️ Museums</div>
+  <div class="suggestion-chip" onclick="quickPrompt('🌙 Nightlife','Amsterdam nightlife recommendations')">🌙 Nightlife</div>
 </div>
 <div id="chat-input-bar">
   <textarea id="chat-input" rows="1" placeholder="Ask your wizard…" onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
@@ -883,7 +922,9 @@
   let userLocation = null;
   let partyData = { adults: 1, children: [] };
   let currentTab = 'home';
-  let chatHistory = [];
+  let topics = [{ id: 0, name: '✈ General', history: [] }];
+  let currentTopicId = 0;
+  let topicIdCounter = 1;
   let isTyping = false;
   let currentAbort = null;
 
@@ -898,6 +939,8 @@
     loadSettingsForm();
     checkApiKey();
     autoLocation();
+    renderTopicTabs();
+    switchTopic(0);
   });
 
   function autoLocation() {
@@ -1083,6 +1126,7 @@
     const chatBar    = document.getElementById('chat-input-bar');
     const chatSug    = document.getElementById('chat-suggestions');
     const chatHeader = document.getElementById('chat-header');
+    const topicTabs  = document.getElementById('topic-tabs');
     const mainHeader = document.getElementById('header');
     const tabBar     = document.getElementById('tabbar');
 
@@ -1090,6 +1134,7 @@
       chatBar.classList.add('visible');
       chatSug.classList.add('visible');
       chatHeader.classList.add('visible');
+      topicTabs.classList.add('visible');
       mainHeader.style.display = 'none';
       tabBar.style.display = 'none';
       scrollChat();
@@ -1097,6 +1142,7 @@
       chatBar.classList.remove('visible');
       chatSug.classList.remove('visible');
       chatHeader.classList.remove('visible');
+      topicTabs.classList.remove('visible');
       mainHeader.style.display = '';
       tabBar.style.display = 'flex';
     }
@@ -1118,11 +1164,42 @@
     return ctx;
   }
 
-  function quickPrompt(text) {
+  function renderTopicTabs() {
+    const el = document.getElementById('topic-tabs');
+    el.innerHTML = topics.map(t =>
+      `<div class="topic-tab${t.id === currentTopicId ? ' active' : ''}" onclick="switchTopic(${t.id})">${t.name}</div>`
+    ).join('') + `<div class="topic-tab-add" onclick="newTopic()">＋</div>`;
+  }
+
+  function switchTopic(id) {
+    currentTopicId = id;
+    document.querySelectorAll('.topic-messages').forEach(el => {
+      el.classList.toggle('active', parseInt(el.dataset.topicId) === id);
+    });
+    renderTopicTabs();
+    scrollChat();
+  }
+
+  function newTopic(name) {
+    const id = topicIdCounter++;
+    topics.push({ id, name: name || 'New chat', history: [] });
+    const container = document.createElement('div');
+    container.className = 'topic-messages';
+    container.dataset.topicId = id;
+    document.getElementById('chat-messages').appendChild(container);
+    switchTopic(id);
+    setTimeout(() => {
+      const tabs = document.getElementById('topic-tabs');
+      tabs.scrollLeft = tabs.scrollWidth;
+    }, 50);
+  }
+
+  function quickPrompt(topicName, text) {
     switchTab('chat');
     setTimeout(() => {
+      newTopic(topicName);
       const input = document.getElementById('chat-input');
-      input.value = text;
+      input.value = text || '';
       autoResize(input);
       input.focus();
     }, 100);
@@ -1136,8 +1213,9 @@
     input.value = '';
     input.style.height = 'auto';
 
+    const topic = topics.find(t => t.id === currentTopicId);
     addMsg('user', text);
-    chatHistory.push({ role: 'user', content: text });
+    topic.history.push({ role: 'user', content: text });
 
     if (!settings.apiKey || !settings.apiKey.startsWith('sk-ant-')) {
       addMsg('ai', '🔑 Please add your Anthropic API key in Settings to enable AI responses. Your key is stored only on your device.');
@@ -1163,7 +1241,7 @@
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
           system: buildSystemPrompt(),
-          messages: chatHistory.slice(-20)
+          messages: topic.history.slice(-20)
         }),
         signal: currentAbort.signal
       });
@@ -1173,7 +1251,7 @@
 
       if (data.content && data.content[0]) {
         const reply = data.content[0].text;
-        chatHistory.push({ role: 'assistant', content: reply });
+        topic.history.push({ role: 'assistant', content: reply });
         addMsg('ai', reply);
       } else {
         addMsg('ai', '⚠️ Something went wrong. Please try again. ' + (data.error?.message || ''));
@@ -1196,15 +1274,8 @@
   }
 
   function addMsg(role, text) {
-    const msgs = document.getElementById('chat-messages');
+    const container = document.querySelector(`.topic-messages[data-topic-id="${currentTopicId}"]`);
     const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-
-    if (role === 'user' && msgs.querySelector('.msg')) {
-      const divider = document.createElement('div');
-      divider.className = 'topic-divider';
-      divider.textContent = now;
-      msgs.appendChild(divider);
-    }
 
     const div = document.createElement('div');
     div.className = `msg ${role}`;
@@ -1216,17 +1287,17 @@
       <div class="msg-bubble">${formattedText}</div>
       <div class="msg-time">${now}</div>
     `;
-    msgs.appendChild(div);
+    container.appendChild(div);
     scrollChat();
   }
 
   function showTyping() {
-    const msgs = document.getElementById('chat-messages');
+    const container = document.querySelector(`.topic-messages[data-topic-id="${currentTopicId}"]`);
     const div = document.createElement('div');
     div.id = 'typing';
     div.className = 'typing-indicator';
     div.innerHTML = `<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>`;
-    msgs.appendChild(div);
+    container.appendChild(div);
     scrollChat();
   }
 
