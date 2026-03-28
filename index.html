@@ -681,7 +681,7 @@
   <!-- CHAT SCREEN -->
   <div id="screen-chat" class="screen" style="padding-top: calc(var(--safe-top) + 64px); padding-bottom: calc(140px + var(--safe-bot))">
     <div id="api-notice" class="visible">
-      ⚠️ Add your Anthropic API key in <strong>Settings</strong> to enable AI responses.
+      ⚠️ Add your OpenAI API key in <strong>Settings</strong> to enable AI responses.
     </div>
     <div id="chat-messages">
       <div class="msg ai">
@@ -791,21 +791,21 @@
     <div class="settings-group">
       <div class="settings-row">
         <div>
-          <div class="settings-label">Anthropic API key</div>
+          <div class="settings-label">OpenAI API key</div>
           <div class="settings-sub">Powers your AI wizard</div>
         </div>
-        <input class="settings-input" id="s-apikey" type="password" placeholder="sk-ant-..." oninput="saveSettings()" />
+        <input class="settings-input" id="s-apikey" type="password" placeholder="sk-..." oninput="saveSettings()" />
       </div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:20px;padding:0 4px">
-      Your API key is stored locally on your device only. Get a key at console.anthropic.com
+      Your API key is stored locally on your device only. Get a key at platform.openai.com
     </div>
 
     <button class="btn-primary" onclick="clearData()" style="background:transparent;border:0.5px solid var(--border2);color:var(--text2)">
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.2.3
+      v1.2.4
     </div>
   </div>
 
@@ -1018,7 +1018,7 @@
 
   function checkApiKey() {
     const notice = document.getElementById('api-notice');
-    if (settings.apiKey && settings.apiKey.startsWith('sk-ant-')) {
+    if (settings.apiKey && settings.apiKey.startsWith('sk-')) {
       notice.classList.remove('visible');
     } else {
       notice.classList.add('visible');
@@ -1113,8 +1113,8 @@
     addMsg('user', text);
     chatHistory.push({ role: 'user', content: text });
 
-    if (!settings.apiKey || !settings.apiKey.startsWith('sk-ant-')) {
-      addMsg('ai', '🔑 Please add your Anthropic API key in Settings to enable AI responses. Your key is stored only on your device.');
+    if (!settings.apiKey || !settings.apiKey.startsWith('sk-')) {
+      addMsg('ai', '🔑 Please add your OpenAI API key in Settings to enable AI responses. Your key is stored only on your device.');
       return;
     }
 
@@ -1123,27 +1123,29 @@
     isTyping = true;
 
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const messages = [
+        { role: 'system', content: buildSystemPrompt() },
+        ...chatHistory.slice(-20)
+      ];
+
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': settings.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
+          'Authorization': 'Bearer ' + settings.apiKey
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'gpt-4o',
           max_tokens: 1024,
-          system: buildSystemPrompt(),
-          messages: chatHistory.slice(-20)
+          messages
         })
       });
 
       const data = await resp.json();
       hideTyping();
 
-      if (data.content && data.content[0]) {
-        const reply = data.content[0].text;
+      if (data.choices && data.choices[0]) {
+        const reply = data.choices[0].message.content;
         chatHistory.push({ role: 'assistant', content: reply });
         addMsg('ai', reply);
       } else {
