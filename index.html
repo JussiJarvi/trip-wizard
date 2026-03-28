@@ -789,12 +789,12 @@
 
     <div class="section-label">AI configuration</div>
     <div class="settings-group">
-      <div class="settings-row">
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
         <div>
           <div class="settings-label">OpenAI API key</div>
           <div class="settings-sub">Powers your AI wizard</div>
         </div>
-        <input class="settings-input" id="s-apikey" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="sk-..." oninput="saveSettings()" />
+        <input class="settings-input" id="s-apikey" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="sk-..." oninput="saveSettings()" style="width:100%;text-align:left;font-size:13px;font-family:monospace" />
       </div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:20px;padding:0 4px">
@@ -805,7 +805,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.2.7
+      v1.2.8
     </div>
   </div>
 
