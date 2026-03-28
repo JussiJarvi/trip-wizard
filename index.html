@@ -394,6 +394,28 @@
     }
     #send-btn:active { transform: scale(0.9); }
     #send-btn:disabled { opacity: 0.4; }
+    #stop-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: rgba(255,80,80,0.15);
+      border: 0.5px solid rgba(255,80,80,0.35);
+      cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      font-size: 13px;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      color: #ff6060;
+    }
+    #stop-btn.visible { display: flex; }
+    #stop-btn:active { transform: scale(0.9); }
+    .topic-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 20px 0 4px;
+      color: var(--text3); font-size: 11px;
+    }
+    .topic-divider::before, .topic-divider::after {
+      content: ''; flex: 1; height: 0.5px; background: var(--border);
+    }
 
     /* TRIP PLANNER */
     .day-card {
@@ -805,7 +827,7 @@
       Clear all data
     </button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:24px;padding-bottom:8px">
-      v1.3.0
+      v1.3.1
     </div>
   </div>
 
@@ -843,6 +865,7 @@
 <div id="chat-input-bar">
   <textarea id="chat-input" rows="1" placeholder="Ask your wizard…" onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
   <button id="send-btn" onclick="sendMessage()">➤</button>
+  <button id="stop-btn" onclick="stopMessage()">◼</button>
 </div>
 
 <!-- MODAL -->
@@ -862,6 +885,7 @@
   let currentTab = 'home';
   let chatHistory = [];
   let isTyping = false;
+  let currentAbort = null;
 
   // ─── INIT ─────────────────────────────────────────────────────
   window.addEventListener('load', () => {
@@ -1097,8 +1121,10 @@
   function quickPrompt(text) {
     switchTab('chat');
     setTimeout(() => {
-      document.getElementById('chat-input').value = text;
-      sendMessage();
+      const input = document.getElementById('chat-input');
+      input.value = text;
+      autoResize(input);
+      input.focus();
     }, 100);
   }
 
@@ -1119,8 +1145,10 @@
     }
 
     showTyping();
-    document.getElementById('send-btn').disabled = true;
+    document.getElementById('send-btn').style.display = 'none';
+    document.getElementById('stop-btn').classList.add('visible');
     isTyping = true;
+    currentAbort = new AbortController();
 
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1136,7 +1164,8 @@
           max_tokens: 1024,
           system: buildSystemPrompt(),
           messages: chatHistory.slice(-20)
-        })
+        }),
+        signal: currentAbort.signal
       });
 
       const data = await resp.json();
@@ -1151,16 +1180,31 @@
       }
     } catch(e) {
       hideTyping();
-      addMsg('ai', '⚠️ Connection error. Check your internet and API key.');
+      if (e.name !== 'AbortError') {
+        addMsg('ai', '⚠️ Connection error. Check your internet and API key.');
+      }
     }
 
     isTyping = false;
-    document.getElementById('send-btn').disabled = false;
+    currentAbort = null;
+    document.getElementById('send-btn').style.display = '';
+    document.getElementById('stop-btn').classList.remove('visible');
+  }
+
+  function stopMessage() {
+    if (currentAbort) currentAbort.abort();
   }
 
   function addMsg(role, text) {
     const msgs = document.getElementById('chat-messages');
     const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+    if (role === 'user' && msgs.querySelector('.msg')) {
+      const divider = document.createElement('div');
+      divider.className = 'topic-divider';
+      divider.textContent = now;
+      msgs.appendChild(divider);
+    }
 
     const div = document.createElement('div');
     div.className = `msg ${role}`;
